@@ -6,11 +6,11 @@ clc;
 close all;
 clear all;
 
-fs = 10000;              %sampling frequency
+fs = 1000;              %sampling frequency
 Ts = 1/fs;              %sample period
-fc = 1000;               %cut off frequency in Hz
+fc = 100;               %cut off frequency in Hz
 Fc = fc/fs;             %normalised cut off frequency
-m = 27;                 %number of taps (N = 2m+1)
+m = 50;                 %number of taps (N = 2m+1)
 N = 2*m+1;              % total number of filter taps
 
 for n = 1:m
@@ -19,7 +19,7 @@ for n = 1:m
 end
 
 plot(h)
-
+pause;
  
 h = [fliplr(h) 2*Fc h];     %construct filter (add n = 0 coefficient for LP and -ve half)
 %h = [fliplr(h) 1-2*Fc h];     %construct filter (add n = 0 coefficient for HP and -ve half)
@@ -27,7 +27,7 @@ h = [fliplr(h) 2*Fc h];     %construct filter (add n = 0 coefficient for LP and 
 figure;
 plot(h)
 title('Filter coefficients');
-
+pause;
 
 x = randn(1,1000000)*sqrt(512);     %generate white noise signal (normalise for default 512 point fft in pspectrum)
 xf = conv(h,x);                     %calculate filter output
@@ -38,7 +38,7 @@ hw = h.*w;                      %apply window to filter coefficients
 figure;
 plot(hw)
 title('Windowed Filter coefficients');
-
+pause;
 
 xfw = conv(hw,x);               %calculate filter output   
 
