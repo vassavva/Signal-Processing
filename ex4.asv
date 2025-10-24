@@ -40,7 +40,7 @@ xf_IIR = filter(b,a,x);         %calculate IIR filter output
 pspectrum(xf_IIR,fs)            % spectrum of output signal (frequency response)
 legend('FIR','IIR');
 
-pulse = [ones(1,1) zeros(1,100)];       %generate square pulse
+pulse = [ones(1,30) zeros(1,60)];       %generate square pulse
 pulse_FIR = conv(hw,pulse);                         %calculate FIR filter output
 pulse_IIR = filter(b,a,pulse);                      %calculate IIR filter output
 
