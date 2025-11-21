@@ -59,10 +59,16 @@ for i=1:length(x)
     accumulator = (bs - as)/a(1) ;
     y(i)=accumulator;
     
+<<<<<<< HEAD
     for n= 1:m
         temp = output_y;
         output_y(n+1) = temp(n);
 
+=======
+    for n= 1:m-1
+        temp = output_y;
+        output_y(n+1) = temp(n);
+>>>>>>> 9993c1b5a0435035a45b027220d5e2f4cc86f4c5
     end
     output_y(1) = y(i); 
 end
