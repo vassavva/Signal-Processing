@@ -42,23 +42,27 @@ legend('FIR','IIR');
 
 pulse = [ones(1,1) zeros(1,100)];       %generate square pulse
 pulse_FIR = conv(hw,pulse);                         %calculate FIR filter output
-%pulse_IIR = filter(b,a,pulse);                      %calculate IIR filter output
+pulse_IIR = filter(b,a,pulse);                      %calculate IIR filter output
 
 input_x = zeros(1,m+1) ; 
 output_y = zeros(1,m) ; 
 
+
 for i=1:length(x)
     for n = 1:m
-        input_x(n+1) = input_x(n);
+        temp = input_x;
+        input_x(n+1) = temp(n);
     end
     input_x(1) = x(i);
     bs = b*input_x' ;
     as = a(2:end)*output_y';
-    accumulator = bs - as ;
+    accumulator = (bs - as)/a(1) ;
     y(i)=accumulator;
     
     for n= 1:m-1
-        output_y(n+1) = output_y(n);
+        temp = output_y;
+        output_y(n+1) = temp(n);
+
     end
     output_y(1) = y(i); 
 end
@@ -69,11 +73,11 @@ figure;
 plot(pulse,'k');                                    %plot filter outputs
 hold;
 plot(pulse_FIR,'b');
-%plot(pulse_IIR,'r');
+plot(pulse_IIR,'r');
 plot(output_y, 'm')
 xlim([1 100])
 xlabel('n');
-legend('Input pulse','FIR filter output','IIR filter output');
+legend('Input pulse','FIR filter output','IIR filter output', 'Digital filter Output');
 title('pulse response');
 
 
