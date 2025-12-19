@@ -1,80 +1,72 @@
-%Task 1
+%% TASK 1 -  Time and frequency domain analysis
+
 clc;
 close all;
 clear all;
 
-[x,fs] = audioread('Vasiliki Savva.wav');   %extract signal from audio
+[x,fs] = audioread('Vasiliki Savva.wav');                   %extract signal from audio
 x = x(:);
-Ts = 1/fs;                                  %sampling period
-N = length(x); 
-t = 0:Ts:(N-1)*Ts;                          %generate discrete time values (nTs)
+Ts = 1/fs;                                                  %sampling period
+N = length(x);                                              %calculates N using the duration of the signal
+t = 0:Ts:(N-1)*Ts;                                          %generate discrete time values (nTs)
 
-figure; plot(t,x);                          %plot time-domain
+%plot time domain
+figure; plot(t,x);                          
 xlabel('time(sec)'); ylabel('Amplitude'); title('Time Domain');
 
 
-x_fft = fft(x);                             %calculate FFT                             
+%calcualte FFT
+x_fft = fft(x);                                                      
 k = (0:1:N-1)';
-f = k*(fs/N);                               %normalise frequency
+f = k*(fs/N);                                               %normalise frequency
 
 x_norm= abs(x_fft)/N;
 x_db=20*log10(x_norm);
 figure; plot(f,x_db);              
 xlim([0 fs/2]);
-xlabel('Discrete Frequency (Hz)'); ylabel('Magnitude');
-title('Spectrum');
+xlabel('Discrete Frequency (Hz)'); ylabel('Magnitude'); title('Frequency Spectrum');
 
+%Generate N points Windows
+han_w = 0.5*(1-cos(2*pi*k/(N-1)));                          % Hanning
+rec_w = ones(1, N)';                                        % Rectagular
+ham_w = (0.54 - 0.46 * cos(2 * pi * (0:N-1) / (N - 1)))';   % Hamming
 
-samples_to_show = min(1000, N);
-
-
-n_window = (0:N-1)';
-
-han_w = 0.5*(1-cos(2*pi*k/(N-1)));              %generate N point hanning window
-rec_w = ones(1, N)';                                 % Changed to row vector
-ham_w = (0.54 - 0.46 * cos(2 * pi * (0:N-1) / (N - 1)))';
-
-
-
-xh = x.*han_w;                                  %apply window to signal
+%Apply windows to signal
+xh = x.*han_w;                                              %Hanning                                           
 x_fft_h = fft(xh);
 xh_norm= abs(x_fft_h)/N;
 xh_db=20*log10(xh_norm);
 
-xr = x.*rec_w;                                  %apply window to signal
+xr = x.*rec_w;                                              %Rectagular                                  
 x_fft_r = fft(xr);
 xr_norm= abs(x_fft_r)/N;
 xr_db=20*log10(xr_norm);
 
-xm = x.*ham_w;                                  %apply window to signal
+xm = x.*ham_w;                                              %Hamming
 x_fft_m = fft(xm);
 xm_norm= abs(x_fft_m)/N;
 xm_db=20*log10(xm_norm);
 
+%Plot Windowed Signals for comparison
 figure;
-
-
 plot(f,xr_db,'b'); 
 hold on;
 plot(f,xm_db, 'g');
 plot(f,xh_db,'r'); 
 hold off;
-xlabel('Discrete Frequency (Hz)'); ylabel('Magnitude');
-title('')
-legend('Hamming', 'Rectagular', 'Hanning');
+xlabel('Discrete Frequency (Hz)'); ylabel('Magnitude'); title('Windowed Signals');
+legend('Rectangular', 'Hamming', 'Hanning');
 grid on
 xlim([0 fs/2])
 
 
-
-fc = 18000;              % FROM THE GRAPH ESTIMATE 18K 
-BW = 8000;              % use an 8kHz bandwidth
+%Estimations of the spectrum
+fc = 18000;                                                    
+BW = 8000;                                                     % use an 8kHz bandwidth
 fmin = fc - BW/2;        
 fmax = fc + BW/2    ;
 
-
-
-%Task 2
+%% TASK 2 - Bandpass Filter
 
 dF = 2000;          % transition width
 
@@ -107,22 +99,30 @@ w_blk = 0.42 - 0.5*cos(2*pi*n_b/(Nblc-1)) + 0.08*cos(4*pi*n_b/(Nblc-1));
 h_ham = h_ideal_ham .* w_ham;
 h_blk = h_ideal_blk .* w_blk;
 
-% Verify frequency responses
+
+N_fft = 8192;
+H_ham = fft(h_ham, N_fft);
+H_blk = fft(h_blk, N_fft);
+
+f_resp = (0:N_fft/2) * fs / N_fft;
+
+H_ham_one = 20*log10(abs(H_ham(1:N_fft/2+1)) + eps);
+H_blk_one = 20*log10(abs(H_blk(1:N_fft/2+1)) + eps);
 
 figure;
-subplot(2,1,1); freqz(h_ham,1,4096,fs); title('Hamming Window FIR Bandpass');
-subplot(2,1,2); freqz(h_blk,1,4096,fs); title('Blackman Window FIR Bandpass');
+plot(f_resp, H_ham_one, 'b', 'LineWidth', 1.2); hold on;
+plot(f_resp, H_blk_one, 'r', 'LineWidth', 1.2); 
+xlabel('Frequency (Hz)'); ylabel('Magnitude (dB)');
+title('FIR Bandpass Filter Frequency Response');
+legend('Hamming Window', 'Blackman Window');
+grid on; xlim([0 fs/2]);
 
 % Manual FIR convolution
-
-Lx = length(x);
-
-% Preallocate output
-y_ham = zeros(1, Lx);
-y_blk = zeros(1, Lx);
+y_ham = zeros(1, N);
+y_blk = zeros(1, N);
 
 % Hamming filter
-for n = 1:Lx
+for n = 1:N
     acc = 0;
     for k = 1:Nham
         if (n - k + 1) > 0
@@ -133,7 +133,7 @@ for n = 1:Lx
 end
 
 % Blackman filter
-for n = 1:Lx
+for n = 1:N
     acc = 0;
     for k = 1:Nblc
         if (n - k + 1) > 0
@@ -144,7 +144,6 @@ for n = 1:Lx
 end
 % Time-domain comparison
 
-t = (0:Lx-1)/fs;
 
 figure;
 subplot(3,1,1); plot(t,x); title('Original AM Signal'); xlabel('Time (s)'); ylabel('Amplitude');
@@ -152,37 +151,41 @@ subplot(3,1,2); plot(t,y_ham); title('Filtered AM Signal (Hamming)'); xlabel('Ti
 subplot(3,1,3); plot(t,y_blk); title('Filtered AM Signal (Blackman)'); xlabel('Time (s)'); ylabel('Amplitude');
 
 % Frequency-domain comparison
+% Compute FFT and one-sided magnitude in dB
+X  = 20*log10(abs(fft(x, N_fft)/N) + eps);                           % Original signal
+Yh = 20*log10(abs(fft(y_ham, N_fft)/N) + eps);                       % Hamming filtered
+Yb = 20*log10(abs(fft(y_blk, N_fft)/N) + eps);                       % Blackman filtered
 
-Nfft = 8192;
-f_fft = linspace(-fs/2, fs/2, Nfft);
+% Keep only positive frequencies
+X  = X(1:N_fft/2+1);
+Yh = Yh(1:N_fft/2+1);
+Yb = Yb(1:N_fft/2+1);
 
-X  = fftshift(abs(fft(x, Nfft)));
-Yh = fftshift(abs(fft(y_ham, Nfft)));
-Yb = fftshift(abs(fft(y_blk, Nfft)));
-
+% Plot
 figure;
-subplot(3,1,1); plot(f_fft,X); title('Original AM Signal Spectrum'); xlabel('Hz');
-subplot(3,1,2); plot(f_fft,Yh); title('Hamming Fsssiltered Spectrum'); xlabel('Hz');
-subplot(3,1,3); plot(f_fft,Yb); title('Blackman Filtered Spectrum'); xlabel('Hz');
+subplot(3,1,1); plot(f_resp, X, 'b'); title('Original AM Signal Spectrum'); xlabel('Frequency (Hz)'); ylabel('Magnitude (dB)'); grid on;
+subplot(3,1,2); plot(f_resp, Yh, 'g'); title('Hamming Filtered Spectrum'); xlabel('Frequency (Hz)'); ylabel('Magnitude (dB)'); grid on;
+subplot(3,1,3); plot(f_resp,Yb, 'r'); title('Blackman Filtered Spectrum'); xlabel('Frequency (Hz)'); ylabel('Magnitude (dB)'); grid on;
 
 
-% Task 3 – Carrier Recovery & Mixing (Corrected)
 
-x_bp = y_blk;           % Blackman FIR output
 
-% --- Square law for carrier recovery
-x_sq = x_bp.^2;
+%% % Task 3 – Carrier Recovery & Mixing
+
+x_bp = y_blk;                                                                % Blackman FIR output
+x_sq = x_bp.^2;                                                              % Square law for carrier recovery
+
 
 % Apply Hamming window to reduce spectral leakage
 h_win = hamming(length(x_sq))';
 x_sq_windowed = x_sq .* h_win;
 
 % FFT with high resolution
-Nfft = 2^16;
-Xsq = fft(x_sq_windowed, Nfft);
+N_fft = 2^16;
+Xsq = fft(x_sq_windowed, N_fft);
 
 % Frequency vector (0 to fs)
-f_sq = (0:Nfft-1)*(fs/Nfft);
+f_sq = (0:N_fft-1)*(fs/N_fft);
 
 % Expected carrier from Task 1
 expected_fc = 18000;   % Hz
@@ -203,121 +206,122 @@ f_2fc = f_2fc(idx_max);
 fc_est = f_2fc / 2;
 fprintf('Estimated carrier frequency fc = %.0f Hz\n', fc_est);
 
-% --- Generate local carrier
+% Generate local carrier
 t_bp = (0:length(x_bp)-1)/fs;
 phi = 0;  % initial phase
 local_carrier = cos(2*pi*fc_est*t_bp + phi);
 
-% --- Mixing (multiply bandpass signal with local carrier)
+% Mixing (multiply bandpass signal with local carrier)
 x_mix = x_bp .* local_carrier;
 
-% --- Time domain plots
+% Time domain plots
 figure;
 subplot(2,1,1); plot(t_bp, x_bp); title('Bandpass Filtered AM Signal'); xlabel('Time (s)'); ylabel('Amplitude');
 subplot(2,1,2); plot(t_bp, x_mix); title('After Mixing with Local Carrier'); xlabel('Time (s)'); ylabel('Amplitude');
 
-% --- Frequency domain plot
-Xmix = fftshift(abs(fft(x_mix, Nfft)));
-f_fft = linspace(0, fs, Nfft);
+% Frequency domain plot
+Xmix = fft(abs(fft(x_mix, N_fft)));
+f_fft = linspace(0, fs, N_fft);
 figure;
 plot(f_sq, 20*log10(abs(Xsq)+eps)); hold on;
-xline(2*expected_fc, 'r--', 'LineWidth', 2);  % Expected 2fc
-xline(f_2fc, 'g--', 'LineWidth', 2);         % Detected 2fc
+xline(2*expected_fc, 'r');                                             % Expected 2fc
+xline(f_2fc, 'g--');                                                     % Detected 2fc
 xlabel('Frequency (Hz)'); ylabel('Magnitude (dB)');
 title('Squared Signal Spectrum for Carrier Detection');
 grid on;
 legend('Spectrum','Expected 2fc','Detected 2fc');
 
-% Task 4 – IIR Lowpass Filter (Butterworth)
 
+%% Task 4 – IIR Lowpass Filter (Butterworth)
 
-
-% Assume x_mix is the mixed signal from Task 3 (Blackman FIR output multiplied by local carrier)
-signal = x_mix;   % input to IIR lowpass
+signal = x_mix;                                                                 % input to IIR lowpass
 
 % Design Butterworth filter
 order = 4;
-fc_lp = 4000;       % cutoff frequency in Hz
-Wn = fc_lp/(fs/2);  % normalized cutoff (0–1, Nyquist)
-
+fc_lp = 4000;                                                                   % cutoff frequency in Hz
+Wn = fc_lp/(fs/2);                                                              % normalized cutoff
 
 [b, a] = butter(order, Wn, 'low');
-% Verify frequency response
+
+% Verify frequency response manually
+N_fft = 4096;                  
+H = fft(b, N_fft) ./ fft(a, N_fft);  
+
+f_resp = (0:N_fft/2) * fs / N_fft;                                              % one-sided frequency vector
+H_mag = 20*log10(abs(H(1:N_fft/2+1)) + eps);
 
 figure;
-freqz(b, a, 4096, fs);
-title('4th-order Butterworth Lowpass Filter');
+plot(f_resp, H_mag);
+xlabel('Frequency (Hz)');
+ylabel('Magnitude (dB)');
+title('4th-order Butterworth Lowpass Filter (Manual)');
+grid on;
+xlim([0 fs/2]);
 
-% Manual filtering via difference equation
+% Manual filtering using difference equation
+y_iir = zeros(1, N);
 
-Lx = length(signal);
-y_iir = zeros(1,Lx);
-
-% Apply difference equation: y[n] = b0*x[n] + b1*x[n-1] + ... - a1*y[n-1] - ...
-for n = 1:Lx
-    acc_b = 0;  % numerator sum
+for n = 1:N
+    acc_b = 0;
     for k = 1:length(b)
-        if (n - k + 1) > 0
-            acc_b = acc_b + b(k)*signal(n - k + 1);
+        if n - k + 1 > 0
+            acc_b = acc_b + b(k) * signal(n - k + 1);
         end
     end
     
-    acc_a = 0;  % denominator sum
+    acc_a = 0;
     for k = 2:length(a)
-        if (n - k + 1) > 0
-            acc_a = acc_a + a(k)*y_iir(n - k + 1);
+        if n - k + 1 > 0
+            acc_a = acc_a + a(k) * y_iir(n - k + 1);
         end
     end
     
-    y_iir(n) = acc_b - acc_a;  % difference equation
+    y_iir(n) = acc_b - acc_a;
 end
 
-% Plot time-domain
-
-t_signal = (0:Lx-1)/fs;
+% Time-domain plots
 figure;
 subplot(2,1,1);
-plot(t_signal, signal);
+plot(t, signal);
 title('Input to IIR Lowpass Filter (Mixed Signal)');
 xlabel('Time (s)'); ylabel('Amplitude');
 
 subplot(2,1,2);
-plot(t_signal, y_iir);
+plot(t, y_iir);
 title('Output of IIR Lowpass Filter (Manual)');
 xlabel('Time (s)'); ylabel('Amplitude');
 
 % Frequency-domain plot
-
-Y_iir = fftshift(abs(fft(y_iir, Nfft)));
+Y_iir = fft(y_iir, N_fft);                                                   % FFT of filtered signal
+Y_iir_mag = 20*log10(abs(Y_iir(1:N_fft/2+1)) + eps);                         % one-sided magnitude
+f_iir = (0:N_fft/2) * fs / N_fft;                                            % matching frequency vector
 
 figure;
-plot(f_sq, Y_iir);
-title('Spectrum After IIR Lowpass Filtering');
-xlabel('Frequency (Hz)');
-ylabel('Magnitude');
+plot(f_iir, Y_iir_mag);
+title('Spectrum After IIR Lowpass Filtering'); xlabel('Frequency (Hz)'); ylabel('Magnitude (dB)');
 grid on;
+xlim([0 fs/2]);
 
-% Task 5 – Improved Phase Adjustment and Playback
 
+%% Task 5 – Improved Phase Adjustment and Playback
 
 signal_lp = y_iir;  % Output of manual IIR lowpass (Task 4)
 y_final = zeros(size(signal_lp));
 
-% --- Stage 1: Coarse Phase Search ---
-phi_coarse = linspace(0, pi, 50);  % coarse 50-point grid
+% Stage 1: Coarse Phase Search
+phi_coarse = linspace(0, pi, 50);                                        % coarse 50-point grid
 rms_coarse = zeros(size(phi_coarse));
 
 for p = 1:length(phi_coarse)
     phi = phi_coarse(p);
     local_carrier = cos(2*pi*fc_est*t_bp + phi);
-    mixed_signal = y_blk .* local_carrier;  % y_blk = filtered bandpass from Task 2
+    mixed_signal = y_blk .* local_carrier;                              % y_blk = filtered bandpass from Task 2
     
-    % Apply same IIR filter
-   % --- Manual IIR filtering (inline) ---
-Lx = length(mixed_signal);
-y_temp = zeros(1,Lx);
+ % Apply same IIR filter
+ % Manual IIR filtering (inline) 
+y_temp = zeros(1,N);
 
-for n = 1:Lx
+for n = 1:N
     acc_b = 0;
     for k = 1:length(b)
         if (n - k + 1) > 0
@@ -336,25 +340,25 @@ for n = 1:Lx
 end
 
     
-    rms_coarse(p) = sqrt(mean(y_temp.^2));  % RMS metric
+    rms_coarse(p) = sqrt(mean(y_temp.^2));                                              % RMS metric
 end
 
 [~, idx_best_coarse] = max(rms_coarse);
 phi_best_coarse = phi_coarse(idx_best_coarse);
 
-% --- Stage 2: Fine Phase Search Around Coarse Optimum ---
-phi_fine = linspace(max(0, phi_best_coarse-pi/20), min(pi, phi_best_coarse+pi/20), 41);  % +/- 9° around coarse
+% Stage 2: Fine Phase Search Around Coarse Optimum 
+phi_fine = linspace(max(0, phi_best_coarse-pi/20), min(pi, phi_best_coarse+pi/20), 41); % +/- 9° around coarse
 rms_fine = zeros(size(phi_fine));
 
 for p = 1:length(phi_fine)
     phi = phi_fine(p);
     local_carrier = cos(2*pi*fc_est*t_bp + phi);
     mixed_signal = y_blk .* local_carrier;
-    % --- Manual IIR filtering (inline) ---
-Lx = length(mixed_signal);
-y_temp = zeros(1,Lx);
+    
+%  Manual IIR filtering (inline)
+y_temp = zeros(1,N);
 
-for n = 1:Lx
+for n = 1:N
     acc_b = 0;
     for k = 1:length(b)
         if (n - k + 1) > 0
@@ -378,14 +382,14 @@ end
 [~, idx_best_fine] = max(rms_fine);
 phi_best = phi_fine(idx_best_fine);
 
-% --- Apply best phase and filter ---
+% Apply best phase and filter
 local_carrier_best = cos(2*pi*fc_est*t_bp + phi_best);
 mixed_signal_best = y_blk .* local_carrier_best;
-% --- Apply best phase and filter ---
-Lx = length(mixed_signal_best);
-y_final = zeros(1,Lx);
+% Apply best phase and filter
 
-for n = 1:Lx
+y_final = zeros(1,N);
+
+for n = 1:N
     acc_b = 0;
     for k = 1:length(b)
         if (n - k + 1) > 0
@@ -403,11 +407,10 @@ for n = 1:Lx
     y_final(n) = acc_b - acc_a;
 end
 
-
 fprintf('Optimal phase selected: %.4f rad (%.2f degrees)\n', phi_best, phi_best*180/pi);
 
-% --- Optional: Simple SNR check ---
-signal_band = 300:3400;  % speech band
+% SNR check
+signal_band = 300:3400;                                                              % speech band
 fft_y = abs(fft(y_final));
 Nfft = length(fft_y);
 freq_axis = (0:Nfft-1)/Nfft*fs;
@@ -416,12 +419,24 @@ noise_idx = freq_axis > 4000 & freq_axis <= fs/2;  % above speech band
 SNR_est = 10*log10(sum(fft_y(speech_idx).^2)/sum(fft_y(noise_idx).^2));
 fprintf('Estimated SNR: %.2f dB\n', SNR_est);
 
-% --- Normalize and Playback ---
+%plot time and frequency domain of demodulated signal
+figure;
+subplot(2,1,1); plot(t_bp, mixed_signal_best);
+title('Demodulated Signal After Phase Optimization'); xlabel('Time (s)'); ylabel('Amplitude');
+
+subplot(2,1,2); 
+Y_final_fft = fft(y_final, 8192);
+f_fft = linspace(0, fs, 8192);
+plot(f_fft, 20*log10(abs(Y_final_fft)+eps));
+title('Spectrum of Demodulated Signal');xlabel('Frequency (Hz)'); ylabel('Magnitude (dB)');
+grid on;
+
+% Normalize and Playback
 x_playback = y_final / max(abs(y_final)) * 0.9;
 sound(x_playback, fs);
 pause(length(x_playback)/fs + 0.5);
 fprintf('Audio playback complete.\n');
 
-% --- Save audio file ---
-audiowrite('demodulated_message_improved.wav', x_playback, fs);
-fprintf('Audio saved as demodulated_message_improved.wav\n');
+% Save audio file
+audiowrite('demodulated_message_Vasiliki_Savva.wav', x_playback, fs);
+fprintf('Audio saved as demodulated_Vasiliki_Savva.wav\n');
